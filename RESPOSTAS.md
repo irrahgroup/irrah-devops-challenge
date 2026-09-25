@@ -55,8 +55,43 @@ A [documentação técnica](docs/architecture/q1-iac-security.md) contém diagra
 rede, seed/import do state, administração SQL por pod temporário, ciclo de vida
 das credenciais, trade-offs e revisões necessárias antes de produção.
 
+# Questão 2 — Pipelines CI/CD e estratégias de deploy
+
+## Requisitos e escolhas
+
+O [README original](README.md) pede pipeline com code review, testes, build, zero
+downtime no Kubernetes, mitigação de risco na atualização e rollback rápido. O
+enunciado aceita desenho ou descrição; adotamos **GitHub Actions** e documentação
+em [docs/architecture/q2-cicd-zero-downtime.md](docs/architecture/q2-cicd-zero-downtime.md).
+
+Este repositório **não contém** a aplicação de WhatsApp. Rolling Update
+(`maxUnavailable=0`, `maxSurge=1`), promoção por **digest**, OCIR, OIDC GitHub→OCI,
+GitHub Environment protegido em production (configuração **externa** proposta), OIDC
+GitHub→OCI e expand/contract em migrations são **decisões de referência** alinhadas ao
+cenário crítico, não exigências literais do enunciado.
+
+## Implementação de referência
+
+- [`.github/workflows/ci.yml`](.github/workflows/ci.yml): formatação, `validate` e
+  `terraform test` (Q1) — únicas verificações executáveis aqui.
+- [`.github/workflows/release.yml`](.github/workflows/release.yml): **referência** para
+  gates de futura promoção por digest (`workflow_dispatch`); jobs `staging-gate` /
+  `production-gate`; **sem** promoção, build, push ou deploy.
+- A documentação descreve o pipeline completo no **repositório real da aplicação**
+  (testes, build de imagem, push, deploy no OKE privado).
+
+Estratégia K8s: **Rolling Update**; rollback pelo **digest estável anterior**. OKE
+privado (Q1) exige conectividade de runner como pré-requisito externo. Sem Helm,
+GitOps, mesh ou canary controller.
+
+## Evidência e limites
+
+**Não houve** execução de integração OCIR/OKE/OIDC neste challenge. O release não
+promove artefato nem simula deploy; proteções de Environment no GitHub não foram
+validadas. CI não substitui testes da aplicação. `maxUnavailable: 0` no Rolling Update
+é estratégia documentada, sem garantia de zero downtime comprovada aqui.
+
 ## Questões pendentes
 
-- Questão 2: pendente, não implementada.
 - Questão 3: pendente, não implementada.
 - Questão 4: pendente, não implementada.
